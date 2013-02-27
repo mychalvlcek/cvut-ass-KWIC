@@ -18,13 +18,12 @@ public class KWIC {
     private static String path; /* path to textfile */
     
     private static ArrayList<String> lines = new ArrayList<String>();
-    //private static ArrayList<Line> linesx = new ArrayList<Line>();
     private static ArrayList<Index> indices = new ArrayList<Index>();
     
     
     public static void main(String[] args) throws Exception {
         if(args.length != 2) throw new Exception("Bad number of arguments!");
-        keyword = args[0];
+        keyword = args[0].toLowerCase();
         path = args[1];
         
         input();
@@ -75,6 +74,29 @@ public class KWIC {
             System.out.println("\033[0;0m");
         }
         System.out.println("\n====================== CONTEXT FOR '" + keyword + "' ======================\n");
+        printContext(getIndexOfKeyword(keyword).getLine());
+    }
+    
+    private static Index getIndexOfKeyword(String keyword) {
+        return getIndexOfKeyword(keyword, 0, indices.size()-1);
+    }
+    
+    private static Index getIndexOfKeyword(String keyword, int start, int end) {
+        int mid = (start + end)/2;
+        String word = indices.get(mid).getWord().toLowerCase().replaceAll("\\W", "");
+        if(word.compareTo(keyword) > 0) {
+            return getIndexOfKeyword(keyword, start, mid-1);
+        } else if(word.compareTo(keyword) < 0) {
+            return getIndexOfKeyword(keyword, mid+1, end);
+        } else {
+            return indices.get(mid);
+        }
+    }
+    
+    private static void printContext(int line) {
+        System.out.println(lines.get(line-1));
+        System.out.println(lines.get(line));
+        System.out.println(lines.get(line+1));
     }
 
 }
