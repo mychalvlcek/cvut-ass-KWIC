@@ -22,7 +22,7 @@ public class KWIC {
     
     
     public static void main(String[] args) throws Exception {
-        if(args.length != 2) throw new Exception("Bad number of arguments!");
+        if(args.length != 2) throw new Exception("Bad number of arguments: " + args.length);
         keyword = args[0].toLowerCase();
         path = args[1];
         
@@ -74,14 +74,42 @@ public class KWIC {
             System.out.println("\033[0;0m");
         }
         System.out.println("\n====================== CONTEXT FOR '" + keyword + "' ======================\n");
-        printContext(getIndexOfKeyword(keyword).getLine());
+        ArrayList<Integer> keywordIndices = getIndicesOfKeyword(keyword);
+        Collections.sort(keywordIndices);
+        if(keywordIndices.get(0) != -1) {
+            for(Integer i : keywordIndices)
+                printContext(indices.get(i).getLine());
+        } else {
+            System.out.println("Not found.");
+        }
     }
     
-    private static Index getIndexOfKeyword(String keyword) {
+    private static ArrayList<Integer> getIndicesOfKeyword(String keyword) {
+        int index = getIndexOfKeyword(keyword);
+        ArrayList<Integer> keywordIndices = new ArrayList<Integer>();
+        keywordIndices.add(index);
+        int indexTmp = index;
+        if(index > -1) {
+            while(indexTmp > -1 && indices.get(--indexTmp).getWord().toLowerCase().replaceAll("\\W", "").compareTo(keyword) == 0) {
+                keywordIndices.add(indexTmp);
+            }
+            indexTmp = index;
+            while(indexTmp < indices.size() && indices.get(++indexTmp).getWord().toLowerCase().replaceAll("\\W", "").compareTo(keyword) == 0) {
+                keywordIndices.add(indexTmp);
+            }
+            return keywordIndices;
+        } else {
+            
+            return keywordIndices;
+        }
+    }
+    
+    private static int getIndexOfKeyword(String keyword) {
         return getIndexOfKeyword(keyword, 0, indices.size()-1);
     }
     
-    private static Index getIndexOfKeyword(String keyword, int start, int end) {
+    private static int getIndexOfKeyword(String keyword, int start, int end) {
+        if(start > end) return -1;
         int mid = (start + end)/2;
         String word = indices.get(mid).getWord().toLowerCase().replaceAll("\\W", "");
         if(word.compareTo(keyword) > 0) {
@@ -89,14 +117,18 @@ public class KWIC {
         } else if(word.compareTo(keyword) < 0) {
             return getIndexOfKeyword(keyword, mid+1, end);
         } else {
-            return indices.get(mid);
+            return mid;
         }
     }
     
     private static void printContext(int line) {
-        System.out.println(lines.get(line-1));
-        System.out.println(lines.get(line));
-        System.out.println(lines.get(line+1));
+        if(line-1 > -1)
+            System.out.println((line-1) + ": " + lines.get(line-1));
+        System.out.println((line) + ": " + lines.get(line));
+        if(line+1 < lines.size())
+            System.out.println((line+1) + ": " + lines.get(line+1));
+        
+        System.out.println("");
     }
 
 }
