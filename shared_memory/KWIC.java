@@ -12,7 +12,7 @@ import java.io.IOException;
  * @author Michal Vlcek <vlcekmi3@fel.cvut.cz>
  */
 public class KWIC {
-    private static String path = "kwic_input.txt";
+    private static final String INPUT_PATH = "kwic_input.txt";
     
     private static int[] chars;
     private static int[] lines;
@@ -33,7 +33,7 @@ public class KWIC {
 
     private static void input() {
         try {
-            File file = new File(path);
+            File file = new File(INPUT_PATH);
             chars = new int[(int)file.length()];
             BufferedReader br = new BufferedReader(new FileReader(file));
             int charIndex = 0;
@@ -52,7 +52,7 @@ public class KWIC {
                 if(chars[i] == 10) lines[lineIndex++] = i+1;
             }
         } catch (FileNotFoundException ex) {
-            System.err.println("File '" + path + "' not found!");
+            System.err.println("File '" + INPUT_PATH + "' not found!");
         } catch (IOException ex) {
             System.err.println("Error while reading file:  " + ex.getMessage());
         }
