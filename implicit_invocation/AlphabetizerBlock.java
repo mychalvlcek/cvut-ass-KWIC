@@ -19,7 +19,7 @@ public class AlphabetizerBlock implements Observer {
     }
     
     private void alphabetize() {
-        Collections.sort(indices.indices, new IndexComparator());
+        Collections.sort(indices.indices);
     }
 
 }
