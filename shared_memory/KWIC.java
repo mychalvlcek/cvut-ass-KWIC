@@ -1,12 +1,10 @@
 package cz.cvut.fel.cs.ass.kwic.shared_memory;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 
 /**
  * KWIC Solution 1 - Shared Memory
@@ -14,17 +12,17 @@ import java.util.Collections;
  * @author Michal Vlcek <vlcekmi3@fel.cvut.cz>
  */
 public class KWIC {
-    private static String keyword; /* searched keyword */
-    private static String path; /* path to textfile */
+    private static String path = "kwic_input.txt";
     
-    private static ArrayList<String> lines = new ArrayList<String>();
-    private static ArrayList<Index> indices = new ArrayList<Index>();
+    private static int[] chars;
+    private static int[] lines;
+    private static int[][] shifts;
+    
+    private static int lineCount = 1;
+    private static int wordCount = 1;
     
     
     public static void main(String[] args) throws Exception {
-        if(args.length != 2) throw new Exception("Bad number of arguments: " + args.length);
-        keyword = args[0].toLowerCase();
-        path = args[1];
         
         input();
         shift();
@@ -35,12 +33,23 @@ public class KWIC {
 
     private static void input() {
         try {
-            BufferedReader br = new BufferedReader(new FileReader(path));
-            String line;
-            while((line = br.readLine()) != null) {
-                if(!line.trim().isEmpty()) {
-                    lines.add(line);
-                }
+            File file = new File(path);
+            chars = new int[(int)file.length()];
+            BufferedReader br = new BufferedReader(new FileReader(file));
+            int charIndex = 0;
+            int lineIndex = 0;
+            int c;
+            // chars
+            while((c = br.read()) != -1) {
+                chars[charIndex++] = c;
+                if(c == 10) lineCount++;
+                if(c == 32 || c == 10) wordCount++;
+            }
+            // lines
+            lines = new int[lineCount];
+            lines[lineIndex++] = 0;
+            for( int i = 0 ; i < chars.length ; i++ ) {
+                if(chars[i] == 10) lines[lineIndex++] = i+1;
             }
         } catch (FileNotFoundException ex) {
             System.err.println("File '" + path + "' not found!");
@@ -50,85 +59,87 @@ public class KWIC {
     }
     
     private static void shift() {
-        for(int i = 0 ; i < lines.size() ; i++) {
-            String[] line = lines.get(i).split("\\s+");
-            for(int j = 0 ; j < line.length ; j++) {
-                indices.add(new Index(line[j], i, j));
+        shifts = new int[wordCount][2];
+        int shiftIndex = 0;
+        int lineIndex = 0;
+        shifts[shiftIndex++] = new int[] {0,0};
+        for(int i = 0 ; i < chars.length ; i++) {
+            
+            if(chars[i] == 10 || chars[i] == 32) {
+                // line index, first char of each word index
+                if(chars[i] == 10) lineIndex++;
+                shifts[shiftIndex++] = new int[] {lineIndex,i+1};
             }
         }
     }
     
     private static void aplhabetize() {
-        Collections.sort(indices, new IndexComparator());
+        shifts = mergesort(shifts);
     }
     
     private static void output() {
         System.out.println("\n====================== OUTPUT ======================\n");
-        for( int i = 0; i < indices.size(); ++i ) {
-            Index index = indices.get(i);
-            String[] words = lines.get(index.getLine()).split("\\s+");
-            Collections.rotate(Arrays.asList(words), -index.getIndex());
-            for(String s : words) {
-                System.out.print(s + " \033[0;1m");
+        for (int i = 0; i < shifts.length; i++) {
+            int endCharIndex = 0;
+            int startCharIndex = lines[shifts[i][0]];
+            if(shifts[i][0]+1 == lines.length ) {
+                endCharIndex = chars.length;
+            } else {
+                endCharIndex = lines[shifts[i][0]+1];
             }
-            System.out.println("\033[0;0m");
-        }
-        System.out.println("\n====================== CONTEXT FOR '" + keyword + "' ======================\n");
-        ArrayList<Integer> keywordIndices = getIndicesOfKeyword(keyword);
-        Collections.sort(keywordIndices);
-        if(keywordIndices.get(0) != -1) {
-            for(Integer i : keywordIndices)
-                printContext(indices.get(i).getLine());
-        } else {
-            System.out.println("Not found.");
-        }
-    }
-    
-    private static ArrayList<Integer> getIndicesOfKeyword(String keyword) {
-        int index = getIndexOfKeyword(keyword);
-        ArrayList<Integer> keywordIndices = new ArrayList<Integer>();
-        keywordIndices.add(index);
-        int indexTmp = index;
-        if(index > -1) {
-            while(indexTmp > -1 && indices.get(--indexTmp).getWord().toLowerCase().replaceAll("\\W", "").compareTo(keyword) == 0) {
-                keywordIndices.add(indexTmp);
+            // after
+            for (int j = shifts[i][1]; j < endCharIndex; j++) {
+                if(chars[j] != 10)
+                    System.out.print((char)chars[j]);
             }
-            indexTmp = index;
-            while(indexTmp < indices.size() && indices.get(++indexTmp).getWord().toLowerCase().replaceAll("\\W", "").compareTo(keyword) == 0) {
-                keywordIndices.add(indexTmp);
+            System.out.print(" ");
+            // before
+            for (int j = startCharIndex; j < shifts[i][1]; j++) {
+                if(chars[j] != 10)
+                    System.out.print((char)chars[j]);
             }
-            return keywordIndices;
-        } else {
-            
-            return keywordIndices;
+            System.out.println("");
         }
     }
     
-    private static int getIndexOfKeyword(String keyword) {
-        return getIndexOfKeyword(keyword, 0, indices.size()-1);
+    // MERGE SORT
+    private static int[][] mergesort(int[][] array) {
+        if (array.length < 2) return array;
+        return merge(mergesort(getFirstHalfOf(array)), mergesort(getSecondHalfOf(array)));
     }
     
-    private static int getIndexOfKeyword(String keyword, int start, int end) {
-        if(start > end) return -1;
-        int mid = (start + end)/2;
-        String word = indices.get(mid).getWord().toLowerCase().replaceAll("\\W", "");
-        if(word.compareTo(keyword) > 0) {
-            return getIndexOfKeyword(keyword, start, mid-1);
-        } else if(word.compareTo(keyword) < 0) {
-            return getIndexOfKeyword(keyword, mid+1, end);
-        } else {
-            return mid;
+    private static int[][] getFirstHalfOf(int[][] array) {
+        double origLength = array.length;
+        int length = (int) Math.ceil(origLength/2);
+        int[][] half = new int[length][2];
+        System.arraycopy(array, 0, half, 0, length);
+        return half;
+    }
+
+    private static int[][] getSecondHalfOf(int[][] array) {
+        double origLength = array.length;
+        int length = (int) Math.floor(origLength/2);
+        int[][] half = new int[length][];
+        System.arraycopy(array, length+array.length%2, half, 0, length);
+        return half;
+    }
+
+    private static int[][] merge(int[][] firstHalf, int[][] secondHalf) {
+        int[][] arr = new int[firstHalf.length + secondHalf.length][2];
+        int i = 0, j = 0;
+        while (i < firstHalf.length && j < secondHalf.length) {
+            String a = String.valueOf((char)chars[firstHalf[i][1]]);
+            String b = String.valueOf((char)chars[secondHalf[j][1]]);
+            if(a.compareToIgnoreCase(b) < 0) {
+                arr[i+j] = firstHalf[i++];
+            } else {
+                arr[i+j] = secondHalf[j++];
+            }
         }
-    }
-    
-    private static void printContext(int line) {
-        if(line-1 > -1)
-            System.out.println((line-1) + ": " + lines.get(line-1));
-        System.out.println((line) + ": " + lines.get(line));
-        if(line+1 < lines.size())
-            System.out.println((line+1) + ": " + lines.get(line+1));
-        
-        System.out.println("");
+        while(i == firstHalf.length && j != secondHalf.length) arr[i+j] = secondHalf[j++];
+        while(i != firstHalf.length && j == secondHalf.length) arr[i+j] = firstHalf[i++];
+        return arr;
+
     }
 
 }
